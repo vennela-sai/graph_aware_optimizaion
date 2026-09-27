@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Graph Memory AI - Advanced Memory System</title>
+  <script src="https://unpkg.com/cytoscape@3.27.0/dist/cytoscape.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    
+    body { 
+      margin: 0; 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      color: white;
+      padding: 15px 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 600;
+      background: linear-gradient(45deg, #fff, #e0e7ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .header-badges {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .badge {
+      padding: 6px 12px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.2);
+      backdrop-filter: blur(10px);
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    #controls {
+      padding: 15px 20px;
+      background: white;
+      border-bottom: 2px solid #e0e7ff;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    #controls input, #controls button {
+      padding: 10px 15px;
+      border: 2px solid #e0e7ff;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+    
+    #controls input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    #controls button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    #controls button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    #controls button:active {
+      transform: translateY(0);
+    }
+    
+    #querySection {
+      padding: 20px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      border-bottom: 2px solid #e0e7ff;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    #querySection input {
+      flex: 1;
+      padding: 12px 18px;
+      border: 2px solid #e0e7ff;
+      border-radius: 12px;
+      font-size: 15px;
+      background: white;
+    }
+    
+    #querySection button {
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    #askBtn {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+    }
+    
+    #clearQuery {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      color: white;
+    }
+    
+    #querySection button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    }
+    
+    #wrap {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      height: calc(100vh - 200px);
+      background: white;
+    }
+    
+    #cy {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+    }
+    
+    #info {
+      border-left: 3px solid #667eea;
+      padding: 20px;
+      overflow: auto;
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+    }
+    
+    #info h3 {
+      margin: 0 0 15px 0;
+      font-size: 18px;
+      color: #1e3c72;
+      font-weight: 600;
+    }
+    
+    #info pre {
+      background: linear-gradient(135deg, #f8f9ff 0%, #e0e7ff 100%);
+      padding: 15px;
+      border-radius: 10px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 13px;
+      line-height: 1.6;
+      border-left: 4px solid #667eea;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    .section {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+      border-radius: 12px;
+      border-left: 4px solid #667eea;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    .section h4 {
+      margin: 0 0 12px 0;
+      font-size: 15px;
+      color: #1e3c72;
+      font-weight: 600;
+    }
+    
+    .subgraph-node {
+      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%) !important;
+      border-width: 4px !important;
+      border-color: #e65100 !important;
+      box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4) !important;
+    }
+    
+    #explanation, #answer, #metrics {
+      max-height: 200px;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+    
+    #explanation p, #metrics p {
+      margin: 8px 0;
+      color: #4a5568;
+    }
+    
+    #explanation strong, #metrics strong {
+      color: #1e3c72;
+    }
+    
+    .model-selector {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    
+    .model-chip {
+      padding: 6px 12px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 2px solid transparent;
+    }
+    
+    .model-chip:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .model-chip.active {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      border-color: #fff;
+    }
+    
+    .feature-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #e0e7ff;
+    }
+    
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: #667eea;
+      font-weight: 500;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+    }
+    
+    .tab.active {
+      color: #1e3c72;
+      border-bottom-color: #667eea;
+    }
+    
+    .tab:hover {
+      background: #f8f9ff;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .integrity-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+    
+    .integrity-badge.pass {
+      background: #10b981;
+      color: white;
+    }
+    
+    .integrity-badge.warning {
+      background: #f59e0b;
+      color: white;
+    }
+    
+    .integrity-badge.fail {
+      background: #ef4444;
+      color: white;
+    }
+    
+    .compression-info {
+      padding: 10px;
+      background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+      border-radius: 8px;
+      margin-top: 10px;
+      font-size: 12px;
+      color: #0c4a6e;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🧠 Graph Memory AI System</h1>
+    <div class="header-badges">
+      <span class="badge" id="status">Ready</span>
+      <span class="badge" id="nodeCount">0 nodes</span>
+    </div>
+  </div>
+  
+  <div id="controls">
+    <input id="topic" placeholder="🔍 Highlight topic..." style="flex: 1; max-width: 200px;" />
+    <button id="refresh">🔄 Refresh Graph</button>
+    <button id="filterSubgraph" style="display:none;">🎯 Subgraph Only</button>
+    <div style="margin-left:10px; font-size:12px; color:#666;">
+      <a href="/agent/gemini" target="_blank" style="color:#667eea; text-decoration:none;">🤖 Gemini</a> |
+      <a href="/agent/qwen" target="_blank" style="color:#667eea; text-decoration:none;">🤖 Qwen</a> |
+      <a href="/agent/claude" target="_blank" style="color:#667eea; text-decoration:none;">🤖 Claude</a> |
+      <a href="/agent/deepseek" target="_blank" style="color:#667eea; text-decoration:none;">🤖 DeepSeek</a> |
+      <a href="/agent/codestral" target="_blank" style="color:#667eea; text-decoration:none;">🤖 Codestral</a>
+    </div>
+  </div>
+  
+  <div id="querySection">
+    <input id="queryInput" placeholder="💬 Ask a question to see subgraph and explanation..." />
+    <button id="askBtn">🚀 Ask</button>
+    <button id="clearQuery">🗑️ Clear</button>
+    
+    <div class="model-selector">
+      <div class="model-chip active" data-model="google/gemini-2.5-flash">Gemini Flash</div>
+      <div class="model-chip" data-model="qwen">Qwen</div>
+      <div class="model-chip" data-model="codestral">Codestral</div>
+      <div class="model-chip" data-model="deepseek-v3">DeepSeek V3</div>
+      <div class="model-chip" data-model="claude-3-haiku">Claude 3 Haiku</div>
+    </div>
+  </div>
+  
+  <div id="wrap">
+    <div id="cy"></div>
+    <div id="info">
+      <div class="feature-tabs">
+        <button class="tab active" data-tab="query">💬 Query</button>
+        <button class="tab" data-tab="compression">🗜️ Compression</button>
+        <button class="tab" data-tab="integrity">✅ Integrity</button>
+        <button class="tab" data-tab="persona">👥 Persona</button>
+        <button class="tab" data-tab="optimization">⚡ GAPO</button>
+      </div>
+      
+      <div id="queryResults" class="tab-content active" style="display:none;">
+        <div class="section">
+          <h4>💡 Answer</h4>
+          <pre id="answer"></pre>
+        </div>
+        <div class="section">
+          <h4>📊 Evaluation Metrics</h4>
+          <div id="metrics"></div>
+        </div>
+        <div class="section">
+          <h4>🔍 Explanation</h4>
+          <div id="explanation"></div>
+        </div>
+      </div>
+      
+      <div id="compressionPanel" class="tab-content">
+        <div class="section">
+          <h4>🗜️ Memory Compression</h4>
+          <p>Compress large graphs to maintain scalability.</p>
+          <button id="compressBtn" style="width:100%; padding:12px; margin-top:10px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; border:none; border-radius:8px; cursor:pointer;">Compress Graph</button>
+          <div id="compressionStatus"></div>
+        </div>
+      </div>
+      
+      <div id="integrityPanel" class="tab-content">
+        <div class="section">
+          <h4>✅ Memory Integrity Analyzer</h4>
+          <p>Check if LLM responses are truthful and consistent with memory.</p>
+          <div id="integrityResults"></div>
+        </div>
+      </div>
+      
+      <div id="personaPanel" class="tab-content">
+        <div class="section">
+          <h4>👥 Multi-Persona Memory</h4>
+          <p>Switch between different AI personas or get combined answers.</p>
+          <select id="personaSelect" style="width:100%; padding:10px; margin-top:10px; border-radius:8px; border:2px solid #e0e7ff;">
+            <option value="combined">Combined Optimal Answer</option>
+            <option value="gemini">Answer as Gemini</option>
+            <option value="qwen">Answer as Qwen</option>
+            <option value="claude">Answer as Claude</option>
+            <option value="deepseek">Answer as DeepSeek</option>
+          </select>
+        </div>
+      </div>
+      
+      <div id="optimizationPanel" class="tab-content">
+        <div class="section">
+          <h4>⚡ Graph-Aware Prompt Optimization (GAPO)</h4>
+          <p>Mathematically optimized node selection:</p>
+          <p style="font-size:12px; color:#666; margin:5px 0;">Score(n) = α·similarity + β·pagerank + γ·informativeness</p>
+          <div style="margin-top:15px;">
+            <label style="display:block; margin:5px 0;">α (Similarity): <input type="number" id="alpha" value="0.5" step="0.1" min="0" max="1" style="width:80px; padding:5px; border-radius:4px; border:1px solid #e0e7ff;"></label>
+            <label style="display:block; margin:5px 0;">β (PageRank): <input type="number" id="beta" value="0.3" step="0.1" min="0" max="1" style="width:80px; padding:5px; border-radius:4px; border:1px solid #e0e7ff;"></label>
+            <label style="display:block; margin:5px 0;">γ (Informativeness): <input type="number" id="gamma" value="0.2" step="0.1" min="0" max="1" style="width:80px; padding:5px; border-radius:4px; border:1px solid #e0e7ff;"></label>
+          </div>
+          <p style="margin-top:10px; font-size:12px; color:#666;">Ask a question while this tab is active to use GAPO optimization.</p>
+          <div id="gapoResults" style="margin-top:15px;"></div>
+        </div>
+      </div>
+      
+      <div id="selectionPanel" class="tab-content active">
+        <h3>📍 Selection</h3>
+        <div id="selType">Nothing selected</div>
+        <div id="meta"></div>
+        <pre id="content" style="display:none"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let cy;
+    let currentSubgraphNodeIds = [];
+    let fullGraphElements = null;
+    let isFiltered = false;
+    let selectedModel = 'google/gemini-2.5-flash';
+
+    function getApiBase() {
+      const stored = localStorage.getItem('API_BASE');
+      return (stored && stored.trim()) || 'http://127.0.0.1:8000';
+    }
+
+    async function fetchGraph(highlight) {
+      const base = getApiBase();
+      const url = highlight ? `${base}/graph?highlight_query=${encodeURIComponent(highlight)}` : `${base}/graph`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`Failed to fetch graph: ${res.status} ${errorText}`);
+        }
+        const data = await res.json();
+        if (data.nodes && data.edges) {
+          return data;
+        } else if (data.elements) {
+          return data.elements;
+        }
+        console.error('Unexpected graph data format:', data);
+        return { nodes: [], edges: [] };
+      } catch (error) {
+        console.error('Error fetching graph:', error);
+        throw error;
+      }
+    }
+
+    function simplifyGraph(elements, maxNodes) {
+      // Keep nodes with highest degree (most connected)
+      const nodesWithDegree = elements.nodes.map(n => ({
+        node: n,
+        degree: elements.edges.filter(e => {
+          const source = e.data?.source || e.source;
+          const target = e.data?.target || e.target;
+          const nodeId = n.data?.id || n.id;
+          return source === nodeId || target === nodeId;
+        }).length
+      }));
+      
+      nodesWithDegree.sort((a, b) => b.degree - a.degree);
+      const topNodes = nodesWithDegree.slice(0, maxNodes);
+      const topNodeIds = new Set(topNodes.map(t => t.node.data?.id || t.node.id));
+      
+      return {
+        nodes: topNodes.map(t => t.node),
+        edges: elements.edges.filter(e => {
+          const source = e.data?.source || e.source;
+          const target = e.data?.target || e.target;
+          return topNodeIds.has(source) && topNodeIds.has(target);
+        })
+      };
+    }
+
+    function render(elements, subgraphNodeIds = [], filterToSubgraph = false) {
+      const nodeCount = (elements.nodes || []).length;
+      
+      // For very large graphs, use simplified view
+      if (nodeCount > 2000) {
+        console.warn(`Graph very large (${nodeCount} nodes), using simplified view`);
+        document.getElementById('status').textContent = `Large graph (${nodeCount} nodes) - simplified view`;
+        
+        // Show simplified view with only top connected nodes
+        elements = simplifyGraph(elements, 500);
+      } else if (nodeCount > 1000) {
+        console.warn(`Graph large (${nodeCount} nodes), using optimized rendering`);
+        document.getElementById('status').textContent = `Large graph (${nodeCount} nodes) - optimized view`;
+      }
+      
+      if (cy) cy.destroy();
+      currentSubgraphNodeIds = subgraphNodeIds;
+      fullGraphElements = elements;
+      
+      if (filterToSubgraph && subgraphNodeIds.length > 0) {
+        const subgraphNodeSet = new Set(subgraphNodeIds);
+        elements = {
+          nodes: elements.nodes.filter(n => subgraphNodeSet.has(n.data.id)),
+          edges: elements.edges.filter(e => 
+            subgraphNodeSet.has(e.data.source) && subgraphNodeSet.has(e.data.target)
+          )
+        };
+      }
+      
+      const validNodeIds = new Set((elements.nodes || []).map(n => n.data?.id || n.id));
+      const validEdges = (elements.edges || []).filter(edge => {
+        const source = edge.data?.source || edge.source;
+        const target = edge.data?.target || edge.target;
+        return validNodeIds.has(source) && validNodeIds.has(target);
+      });
+      
+      const cytoscapeElements = [
+        ...(elements.nodes || []),
+        ...validEdges
+      ];
+      
+      // Use shorter animation for larger graphs
+      const animate = nodeCount < 100;
+      
+      cy = cytoscape({
+        container: document.getElementById('cy'),
+        elements: cytoscapeElements,
+        style: [
+          { 
+            selector: 'node', 
+            style: { 
+              'label': 'data(label)', 
+              'font-size': 11, 
+              'background-color': '#667eea',
+              'width': 70,
+              'height': 70,
+              'text-wrap': 'wrap',
+              'text-max-width': 90,
+              'color': '#fff',
+              'text-outline-width': 2,
+              'text-outline-color': '#1e3c72',
+              'border-width': 2,
+              'border-color': '#764ba2'
+            } 
+          },
+          { 
+            selector: 'node[highlight = "true"]', 
+            style: { 
+              'background-color': '#f5576c', 
+              'border-width': 4, 
+              'border-color': '#e91e63',
+              'width': 80,
+              'height': 80
+            } 
+          },
+          { 
+            selector: 'node.subgraph-node', 
+            style: { 
+              'background': 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
+              'border-width': 4, 
+              'border-color': '#e65100',
+              'width': 75,
+              'height': 75
+            } 
+          },
+          { 
+            selector: 'edge', 
+            style: {
+              'width': 'mapData(weight, 0, 3, 2, 5)',
+              'opacity': 0.6,
+              'line-color': '#9ca3af',
+              'curve-style': 'bezier',
+              'target-arrow-shape': 'triangle',
+              'target-arrow-color': '#9ca3af',
+              'label': 'data(weight)',
+              'font-size': 9,
+              'text-rotation': 'autorotate',
+              'text-margin-y': -8,
+              'text-background-color': '#ffffff',
+              'text-background-opacity': 0.8,
+              'text-background-padding': 2
+            } 
+          },
+          { selector: 'edge[type = "SEMANTIC"]', style: { 'line-color': '#10b981', 'target-arrow-color': '#10b981' } },
+          { selector: 'edge[type = "ENTITY"]', style: { 'line-color': '#3b82f6', 'target-arrow-color': '#3b82f6' } },
+          { selector: 'edge[type = "TEMPORAL"]', style: { 'line-color': '#6b7280', 'line-style': 'dashed', 'target-arrow-color': '#6b7280' } }
+        ],
+        layout: { name: 'cose', animate: animate, animationDuration: animate ? 500 : 0 }
+      });
+
+      if (subgraphNodeIds.length > 0) {
+        subgraphNodeIds.forEach(nodeId => {
+          const node = cy.getElementById(nodeId);
+          if (node.length > 0) {
+            node.addClass('subgraph-node');
+          }
+        });
+      }
+
+      cy.on('tap', (evt) => {
+        if (evt.target === cy) {
+          document.getElementById('selType').textContent = 'Nothing selected';
+          document.getElementById('meta').textContent = '';
+          document.getElementById('content').style.display = 'none';
+        }
+      });
+      
+      cy.on('tap', 'node', (evt) => {
+        const d = evt.target.data();
+        document.getElementById('selType').textContent = 'Conversation Node';
+        document.getElementById('meta').textContent = `Session: ${d.session_id || ''}\nTimestamp: ${d.timestamp ? new Date(d.timestamp * 1000).toLocaleString() : ''}\nID: ${d.id || ''}`;
+        const pre = document.getElementById('content');
+        
+        const query = d.query || '';
+        const response = d.response || '';
+        const fullText = d.full_text || d.text || '';
+        
+        let conversationText = '';
+        if (query && response) {
+          conversationText = `User: ${query}\n\nAI: ${response}`;
+        } else if (fullText) {
+          conversationText = fullText;
+        } else if (d.label) {
+          conversationText = `Label: ${d.label}\n\n(Full conversation data not available.)`;
+        } else {
+          conversationText = 'No conversation data available';
+        }
+        
+        pre.textContent = conversationText;
+        pre.style.display = 'block';
+      });
+      
+      cy.on('tap', 'edge', (evt) => {
+        const d = evt.target.data();
+        document.getElementById('selType').textContent = `Edge (${d.type || ''})`;
+        document.getElementById('meta').textContent = `Weight: ${typeof d.weight === 'number' ? d.weight.toFixed(3) : d.weight}`;
+        document.getElementById('content').style.display = 'none';
+      });
+      
+      // Update node count
+      document.getElementById('nodeCount').textContent = `${elements.nodes?.length || 0} nodes`;
+    }
+
+    async function refresh() {
+      try {
+        document.getElementById('status').textContent = 'Ask a question to see subgraph';
+        if (cy) cy.destroy();
+        cy = null;
+      } catch (e) {
+        console.error('Refresh error:', e);
+        document.getElementById('status').textContent = 'Error: ' + e.message;
+      }
+    }
+
+    async function askQuery() {
+      const query = document.getElementById('queryInput').value.trim();
+      if (!query) return;
+
+      // Ask user which LLM to use first (only for standard queries)
+      const personaSelect = document.getElementById('personaSelect');
+      const usePersona = personaSelect && personaSelect.value !== 'default';
+      const useGAPO = document.querySelector('.tab[data-tab="optimization"]')?.classList.contains('active');
+      
+      if (!useGAPO && !usePersona) {
+        // For standard queries, confirm model selection
+        const modelNames = {
+          'google/gemini-2.5-flash': 'Gemini Flash',
+          'qwen': 'Qwen',
+          'codestral': 'Codestral',
+          'deepseek-v3': 'DeepSeek V3',
+          'claude-3-haiku': 'Claude 3 Haiku'
+        };
+        const confirmMsg = `Use ${modelNames[selectedModel] || selectedModel} for this query?`;
+        if (!confirm(confirmMsg)) {
+          return; // User cancelled
+        }
+      }
+
+      try {
+        document.getElementById('status').textContent = 'Asking...';
+        document.getElementById('answer').textContent = 'Loading...';
+        document.getElementById('queryResults').style.display = 'none';
+        const base = getApiBase();
+        
+        let response;
+        let result;
+        
+        if (useGAPO) {
+          // Use GAPO optimization
+          const alpha = parseFloat(document.getElementById('alpha')?.value || 0.5);
+          const beta = parseFloat(document.getElementById('beta')?.value || 0.3);
+          const gamma = parseFloat(document.getElementById('gamma')?.value || 0.2);
+          response = await fetch(`${base}/gapo_query`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: query, k: 5, alpha, beta, gamma })
+          });
+        } else if (usePersona) {
+          // Use persona mode
+          const persona = personaSelect.value;
+          response = await fetch(`${base}/ask_persona`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              query: query, 
+              persona: persona,
+              session_id: 'default'
+            })
+          });
+        } else {
+          // Standard query - use selected model only
+          response = await fetch(`${base}/ask_json`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              query: query, 
+              session_id: 'default',
+              model: selectedModel
+            })
+          });
+        }
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Server error:', response.status, errorText);
+          throw new Error(`Server error: ${response.status} - ${errorText}`);
+        }
+        
+        result = await response.json();
+        console.log('Received result:', result);
+        
+        // Check for errors in result
+        if (result.error) {
+          console.error('Error in result:', result.error);
+          throw new Error(result.error);
+        }
+
+        const answerText = result.answer || result.error || 'No answer received';
+        console.log('Setting answer text, length:', answerText.length);
+        document.getElementById('answer').textContent = answerText;
+        
+        const explanation = result.explanation || {};
+        let explanationHtml = '';
+        
+        if (explanation.summary_of_retrieved_memory) {
+          explanationHtml += `<p><strong>Memory Summary:</strong><br>${explanation.summary_of_retrieved_memory}</p>`;
+        }
+        
+        if (explanation.retrieval_details) {
+          const details = explanation.retrieval_details;
+          explanationHtml += `<p><strong>Retrieval Method:</strong> ${details.retrieval_method || 'N/A'}</p>`;
+          explanationHtml += `<p><strong>Entry Point:</strong> ${details.entry_point || 'N/A'}</p>`;
+          if (details.entry_reason) {
+            explanationHtml += `<p><strong>Entry Reason:</strong> ${details.entry_reason}</p>`;
+          }
+        }
+        
+        // Show GAPO scores if available
+        if (explanation.top_k_nodes && explanation.top_k_nodes.length > 0) {
+          const firstNode = explanation.top_k_nodes[0];
+          if (firstNode.combined_score !== undefined || firstNode.similarity !== undefined) {
+            explanationHtml += `<p><strong>GAPO Optimization Scores:</strong></p><ul style="font-size:12px;">`;
+            explanation.top_k_nodes.slice(0, 5).forEach(node => {
+              const combined = node.combined_score || node.combined || 0;
+              const sim = node.similarity || 0;
+              const pr = node.pagerank || 0;
+              const info = node.informativeness || 0;
+              explanationHtml += `<li>Node ${(node.node_id || '').substring(0, 8)}... - Score: ${combined.toFixed(3)} (Sim: ${sim.toFixed(2)}, PR: ${pr.toFixed(2)}, Info: ${info.toFixed(2)})</li>`;
+            });
+            explanationHtml += `</ul>`;
+            if (explanation.formula) {
+              explanationHtml += `<p style="font-size:11px; color:#666;">${explanation.formula}</p>`;
+            }
+          }
+        }
+
+        document.getElementById('explanation').innerHTML = explanationHtml || '<p>No explanation available</p>';
+        
+        // Fetch and display evaluation metrics asynchronously (non-blocking)
+        setTimeout(async () => {
+          try {
+            const metricsResponse = await fetch(`${base}/evaluate`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query: query, k: 5 })
+            });
+            
+            if (metricsResponse.ok) {
+              const metrics = await metricsResponse.json();
+              let metricsHtml = '';
+              
+              if (metrics.CRS !== null && metrics.CRS !== undefined) {
+                metricsHtml += `<p><strong>CRS:</strong> ${(metrics.CRS * 100).toFixed(2)}%</p>`;
+              }
+              if (metrics.GTE !== null && metrics.GTE !== undefined) {
+                metricsHtml += `<p><strong>GTE:</strong> ${metrics.GTE.toFixed(2)} nodes/ms</p>`;
+              }
+              if (metrics.MIU !== null && metrics.MIU !== undefined) {
+                metricsHtml += `<p><strong>MIU:</strong> ${(metrics.MIU * 100).toFixed(2)}%</p>`;
+              }
+              
+              document.getElementById('metrics').innerHTML = metricsHtml || '<p>No metrics available</p>';
+            }
+          } catch (e) {
+            console.error('Error fetching metrics:', e);
+          }
+        }, 50);
+        
+        document.getElementById('queryResults').style.display = 'block';
+        document.getElementById('selectionPanel').style.display = 'none';
+        showTab('query');
+
+        document.getElementById('status').textContent = 'Answer ready';
+        
+        // Load subgraph asynchronously (non-blocking)
+        const subgraphNodeIds = result.subgraph_node_ids || (result.subgraph?.nodes?.map(n => n.id) || []);
+        console.log('Subgraph node IDs:', subgraphNodeIds);
+        if (subgraphNodeIds && subgraphNodeIds.length > 0) {
+          // Use setTimeout to yield to browser and prevent freezing
+          setTimeout(async () => {
+            try {
+              document.getElementById('status').textContent = 'Loading subgraph...';
+              
+              // Use existing full graph if available, otherwise fetch
+              let fullElements = fullGraphElements;
+              if (!fullElements || !fullElements.nodes || fullElements.nodes.length === 0) {
+                console.log('Fetching full graph for subgraph...');
+                fullElements = await fetchGraph();
+                fullGraphElements = fullElements;
+              }
+              
+              if (!fullElements || !fullElements.nodes) {
+                console.error('No graph data available');
+                document.getElementById('status').textContent = 'Answer ready (no graph data)';
+                return;
+              }
+              
+              const subgraphNodeSet = new Set(subgraphNodeIds);
+              const subgraphNodes = (fullElements.nodes || []).filter(n => {
+                const nodeId = n.data?.id || n.id;
+                return subgraphNodeSet.has(nodeId);
+              }).map(n => ({
+                ...n,
+                data: {
+                  ...n.data,
+                  query: n.data?.query || '',
+                  response: n.data?.response || '',
+                  full_text: n.data?.full_text || n.data?.text || ''
+                }
+              }));
+              
+              console.log(`Found ${subgraphNodes.length} subgraph nodes out of ${subgraphNodeIds.length} requested`);
+              
+              const validNodeIds = new Set(subgraphNodes.map(n => n.data?.id || n.id));
+              const subgraphEdges = (fullElements.edges || []).filter(edge => {
+                const source = edge.data?.source || edge.source;
+                const target = edge.data?.target || edge.target;
+                return validNodeIds.has(source) && validNodeIds.has(target);
+              });
+              
+              // Check if subgraph has 2 or fewer nodes
+              if (subgraphNodes.length <= 2) {
+                console.log('Subgraph has only', subgraphNodes.length, 'nodes - not rendering');
+                if (cy) cy.destroy();
+                cy = null;
+                document.getElementById('status').textContent = `Subgraph has only ${subgraphNodes.length} node(s) - nothing to show`;
+                return;
+              }
+              
+              const subgraphElements = {
+                nodes: subgraphNodes,
+                edges: subgraphEdges
+              };
+              
+              console.log('Rendering subgraph with', subgraphNodes.length, 'nodes and', subgraphEdges.length, 'edges');
+              render(subgraphElements, subgraphNodeIds, false);
+              isFiltered = false;
+              document.getElementById('status').textContent = `Subgraph (${subgraphNodes.length} nodes)`;
+            } catch (e) {
+              console.error('Error loading subgraph:', e);
+              document.getElementById('status').textContent = 'Answer ready (subgraph load failed: ' + e.message + ')';
+            }
+          }, 100);
+        } else {
+          console.log('No subgraph node IDs in result');
+        }
+        
+        // Run integrity check asynchronously (don't block)
+        setTimeout(() => {
+          checkIntegrity(result.answer, query, result.explanation);
+        }, 200);
+        
+      } catch (e) {
+        console.error('Query error:', e);
+        document.getElementById('status').textContent = 'Error: ' + e.message;
+        document.getElementById('answer').textContent = 'Error: ' + e.message;
+        alert('Error asking query: ' + e.message + '\n\nCheck browser console (F12) for details.');
+      }
+    }
+
+    async function checkIntegrity(answer, query, explanation) {
+      const base = getApiBase();
+      try {
+        const response = await fetch(`${base}/check_integrity`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ answer, query, explanation })
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          displayIntegrityResults(result);
+          showTab('integrity');
+        }
+      } catch (e) {
+        console.error('Integrity check error:', e);
+      }
+    }
+    
+    async function compressGraph() {
+      const base = getApiBase();
+      document.getElementById('compressionStatus').innerHTML = '<p>Compressing...</p>';
+      try {
+        const response = await fetch(`${base}/compress`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          let html = '<div class="compression-info">';
+          if (result.status === 'success') {
+            html += `<p><strong>✅ Compression Complete!</strong></p>`;
+            html += `<p>Clusters compressed: ${result.clusters_compressed}</p>`;
+            html += `<p>Nodes compressed: ${result.nodes_compressed}</p>`;
+            html += `<p>Compression ratio: ${result.compression_ratio}</p>`;
+          } else {
+            html += `<p>${result.message || result.status}</p>`;
+          }
+          html += '</div>';
+          document.getElementById('compressionStatus').innerHTML = html;
+        }
+      } catch (e) {
+        console.error('Compression error:', e);
+        document.getElementById('compressionStatus').innerHTML = '<p style="color:red;">Error: ' + e.message + '</p>';
+      }
+    }
+
+    function displayIntegrityResults(result) {
+      let html = '<div class="section">';
+      html += `<h4>Integrity Score: <span class="integrity-badge ${result.status}">${result.score.toFixed(2)}%</span></h4>`;
+      
+      if (result.issues && result.issues.length > 0) {
+        html += '<h5>Issues Found:</h5><ul>';
+        result.issues.forEach(issue => {
+          html += `<li><strong>${issue.type}:</strong> ${issue.description}</li>`;
+        });
+        html += '</ul>';
+      } else {
+        html += '<p>✅ No issues found. Response is consistent with memory.</p>';
+      }
+      
+      html += '</div>';
+      document.getElementById('integrityResults').innerHTML = html;
+    }
+
+    function showTab(tabName) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+      const content = document.getElementById(`${tabName}Panel`) || document.getElementById(`${tabName}Results`);
+      if (content) content.classList.add('active');
+    }
+
+
+    function clearQuery() {
+      document.getElementById('queryInput').value = '';
+      document.getElementById('queryResults').style.display = 'none';
+      document.getElementById('selectionPanel').style.display = 'block';
+      showTab('selection');
+      if (fullGraphElements) {
+        render(fullGraphElements, []);
+      }
+    }
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabName = tab.getAttribute('data-tab');
+        showTab(tabName);
+      });
+    });
+
+    // Model selection
+    document.querySelectorAll('.model-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('.model-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        selectedModel = chip.getAttribute('data-model');
+      });
+    });
+
+    document.getElementById('refresh').addEventListener('click', () => refresh());
+    document.getElementById('askBtn').addEventListener('click', askQuery);
+    document.getElementById('queryInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') askQuery();
+    });
+    
+    document.getElementById('clearQuery').addEventListener('click', clearQuery);
+    document.getElementById('compressBtn').addEventListener('click', compressGraph);
+
+    // Don't load graph by default - wait for query
+  </script>
+</body>
+</html>

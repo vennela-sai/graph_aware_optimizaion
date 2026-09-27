@@ -1,0 +1,19 @@
+﻿.env
+venv/
+Lib/
+Scripts/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# local / secrets / junk
+.vscode/
+.idea/
+*.log
+*.pptx
+neo4j_data/
+neo4j_logs/
+
+# datasets — do not upload
+LongMemEval/data/
+6f7db985cb825a81c08037e2d11042923c321fc4f51510fb4d8ada685d760451-2025-11-14-05-48-15-3cc027f9534c4fa6b7adf2b8f1943553/

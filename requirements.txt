@@ -1,0 +1,26 @@
+# requirements.txt
+
+# Core graph operations
+networkx
+
+# LLM interaction (wrapper-agnostic)
+requests
+
+# Embeddings and NLP
+sentence-transformers
+spacy
+scikit-learn
+
+# API and Server
+fastapi
+uvicorn
+python-multipart
+
+# For Neo4j integration (optional, advanced)
+neo4j
+
+# For graph clustering (memory compression)
+python-louvain
+
+# For entropy calculation (GAPO)
+scipy

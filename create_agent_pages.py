@@ -1,0 +1,402 @@
+#!/usr/bin/env python3
+"""
+Script to generate separate HTML pages for each AI agent.
+Each agent has its own page but shares the same Neo4j database.
+"""
+
+import os
+
+# Agent configurations
+AGENTS = {
+    "gemini": {
+        "name": "Gemini Flash",
+        "color": "#f093fb",
+        "bg_color": "#f5576c",
+        "description": "Google's Gemini AI - Helpful, clear, and concise"
+    },
+    "qwen": {
+        "name": "Qwen AI",
+        "color": "#667eea",
+        "bg_color": "#764ba2",
+        "description": "Advanced coding, math, and reasoning - Precise and technical"
+    },
+    "claude": {
+        "name": "Claude 3 Haiku",
+        "color": "#4facfe",
+        "bg_color": "#00f2fe",
+        "description": "Anthropic's Claude - Fast, helpful, and accurate"
+    },
+    "deepseek": {
+        "name": "DeepSeek V3",
+        "color": "#43e97b",
+        "bg_color": "#38f9d7",
+        "description": "General-purpose reasoning with clear explanations"
+    },
+    "codestral": {
+        "name": "Codestral",
+        "color": "#fa709a",
+        "bg_color": "#fee140",
+        "description": "High-performance code generation - Code quality and best practices"
+    }
+}
+
+# Base HTML template
+BASE_TEMPLATE = """<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>{agent_name} - Graph Memory AI</title>
+  <script src="https://unpkg.com/cytoscape@3.27.0/dist/cytoscape.min.js"></script>
+  <style>
+    * {{ box-sizing: border-box; }}
+    
+    body {{ 
+      margin: 0; 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, {bg_color} 0%, {color} 100%);
+      min-height: 100vh;
+    }}
+    
+    .header {{
+      background: linear-gradient(135deg, {bg_color} 0%, {color} 100%);
+      color: white;
+      padding: 15px 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }}
+    
+    .header h1 {{
+      margin: 0;
+      font-size: 24px;
+      font-weight: 600;
+    }}
+    
+    .agent-badge {{
+      padding: 6px 12px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.2);
+      backdrop-filter: blur(10px);
+      font-size: 12px;
+    }}
+    
+    .nav-links {{
+      display: flex;
+      gap: 10px;
+      margin-left: 20px;
+    }}
+    
+    .nav-links a {{
+      color: white;
+      text-decoration: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      background: rgba(255,255,255,0.1);
+      font-size: 12px;
+    }}
+    
+    .nav-links a:hover {{
+      background: rgba(255,255,255,0.2);
+    }}
+    
+    #querySection {{
+      padding: 20px;
+      background: white;
+      border-bottom: 2px solid #e0e7ff;
+    }}
+    
+    #queryInput {{
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #e0e7ff;
+      border-radius: 12px;
+      font-size: 15px;
+      margin-bottom: 10px;
+    }}
+    
+    #askBtn {{
+      padding: 12px 24px;
+      background: linear-gradient(135deg, {bg_color} 0%, {color} 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 15px;
+    }}
+    
+    .main-container {{
+      display: flex;
+      gap: 20px;
+      padding: 20px;
+      height: calc(100vh - 200px);
+    }}
+    
+    .answer-panel {{
+      flex: 1;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow-y: auto;
+    }}
+    
+    #answer {{
+      white-space: pre-wrap;
+      line-height: 1.6;
+      min-height: 200px;
+    }}
+    
+    .subgraph-panel {{
+      flex: 1;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+    }}
+    
+    .subgraph-panel h3 {{
+      margin: 0 0 10px 0;
+      font-size: 16px;
+      color: #333;
+    }}
+    
+    #subgraphContainer {{
+      flex: 1;
+      border: 2px solid #e0e7ff;
+      border-radius: 8px;
+      min-height: 400px;
+      background: #fafafa;
+    }}
+    
+    .subgraph-empty {{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #999;
+      font-size: 14px;
+    }}
+    
+    .status {{
+      padding: 10px 20px;
+      background: rgba(255,255,255,0.9);
+      margin: 0 20px;
+      border-radius: 8px;
+      font-size: 14px;
+    }}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>🤖 {agent_name} Agent</h1>
+      <div class="agent-badge">{description}</div>
+    </div>
+    <div class="nav-links">
+      <a href="/ui">Main</a>
+      <a href="/agent/gemini">Gemini</a>
+      <a href="/agent/qwen">Qwen</a>
+      <a href="/agent/claude">Claude</a>
+      <a href="/agent/deepseek">DeepSeek</a>
+      <a href="/agent/codestral">Codestral</a>
+    </div>
+  </div>
+  
+  <div class="status" id="status">Ready - Ask {agent_name} anything</div>
+  
+  <div id="querySection">
+    <input id="queryInput" placeholder="💬 Ask {agent_name} a question..." />
+    <button id="askBtn">🚀 Ask {agent_name}</button>
+  </div>
+  
+  <div class="main-container">
+    <div class="answer-panel">
+      <h3>💬 Answer</h3>
+      <div id="answer"></div>
+    </div>
+    <div class="subgraph-panel">
+      <h3>📊 Subgraph</h3>
+      <div id="subgraphContainer">
+        <div class="subgraph-empty">Ask a question to see the subgraph</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const AGENT_NAME = '{agent_id}';
+    const API_BASE = localStorage.getItem('API_BASE') || 'http://127.0.0.1:8000';
+    let cy = null;
+    
+    async function askAgent() {{
+      const query = document.getElementById('queryInput').value.trim();
+      if (!query) return;
+      
+      document.getElementById('status').textContent = 'Asking {agent_name}...';
+      document.getElementById('answer').textContent = 'Loading...';
+      document.getElementById('subgraphContainer').innerHTML = '<div class="subgraph-empty">Loading subgraph...</div>';
+      
+      try {{
+        const response = await fetch(`${{API_BASE}}/ask_persona`, {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{
+            query: query,
+            persona: AGENT_NAME,
+            session_id: AGENT_NAME
+          }})
+        }});
+        
+        if (!response.ok) {{
+          throw new Error(`Server error: ${{response.status}}`);
+        }}
+        
+        const result = await response.json();
+        document.getElementById('answer').textContent = result.answer || 'No answer received';
+        document.getElementById('status').textContent = 'Answer ready';
+        
+        // Load subgraph if available
+        const subgraphNodeIds = result.subgraph_node_ids || [];
+        if (subgraphNodeIds && subgraphNodeIds.length > 0) {{
+          setTimeout(() => loadSubgraph(subgraphNodeIds), 100);
+        }} else {{
+          document.getElementById('subgraphContainer').innerHTML = '<div class="subgraph-empty">No subgraph available</div>';
+        }}
+      }} catch (e) {{
+        console.error('Error:', e);
+        document.getElementById('status').textContent = 'Error: ' + e.message;
+        document.getElementById('answer').textContent = 'Error: ' + e.message;
+        document.getElementById('subgraphContainer').innerHTML = '<div class="subgraph-empty">Error loading subgraph</div>';
+      }}
+    }}
+    
+    async function loadSubgraph(subgraphNodeIds) {{
+      try {{
+        console.log('Loading subgraph with', subgraphNodeIds.length, 'node IDs');
+        
+        // Limit subgraph to max 30 nodes for better visualization
+        const limitedNodeIds = subgraphNodeIds.slice(0, 30);
+        if (subgraphNodeIds.length > 30) {{
+          console.log('Limiting subgraph from', subgraphNodeIds.length, 'to 30 nodes');
+        }}
+        
+        // Fetch full graph
+        const response = await fetch(`${{API_BASE}}/graph`);
+        const data = await response.json();
+        
+        const elements = data.elements || data;
+        const nodes = (elements.nodes || []).filter(n => {{
+          const id = n.data?.id || n.id;
+          return limitedNodeIds.includes(id);
+        }});
+        
+        console.log('Filtered to', nodes.length, 'nodes from graph');
+        
+        // Check if subgraph has more than 2 nodes
+        if (nodes.length <= 2) {{
+          document.getElementById('subgraphContainer').innerHTML = `<div class="subgraph-empty">Subgraph has only ${{nodes.length}} node(s) - nothing to show</div>`;
+          return;
+        }}
+        
+        const nodeIdSet = new Set(nodes.map(n => n.data?.id || n.id));
+        const edges = (elements.edges || []).filter(e => {{
+          const source = e.data?.source || e.source;
+          const target = e.data?.target || e.target;
+          return nodeIdSet.has(source) && nodeIdSet.has(target);
+        }});
+        
+        // Clear container
+        document.getElementById('subgraphContainer').innerHTML = '';
+        
+        // Destroy existing graph
+        if (cy) cy.destroy();
+        
+        // Create Cytoscape graph
+        cy = cytoscape({{
+          container: document.getElementById('subgraphContainer'),
+          elements: [
+            ...nodes.map(n => ({{
+              data: {{
+                id: n.data?.id || n.id,
+                label: (n.data?.text || n.data?.label || '').substring(0, 30)
+              }}
+            }})),
+            ...edges.map(e => ({{
+              data: {{
+                source: e.data?.source || e.source,
+                target: e.data?.target || e.target
+              }}
+            }}))
+          ],
+          style: [
+            {{
+              selector: 'node',
+              style: {{
+                'background-color': '{color}',
+                'label': 'data(label)',
+                'width': 30,
+                'height': 30,
+                'font-size': 10
+              }}
+            }},
+            {{
+              selector: 'edge',
+              style: {{
+                'width': 2,
+                'line-color': '#ccc',
+                'target-arrow-color': '#ccc',
+                'target-arrow-shape': 'triangle',
+                'curve-style': 'bezier'
+              }}
+            }}
+          ],
+          layout: {{
+            name: 'breadthfirst',
+            animate: true,
+            animationDuration: 1000,
+            spacingFactor: 1.5
+          }}
+        }});
+        
+        document.getElementById('status').textContent = `Answer ready - Subgraph (${{nodes.length}} nodes)`;
+      }} catch (e) {{
+        console.error('Subgraph error:', e);
+        document.getElementById('subgraphContainer').innerHTML = '<div class="subgraph-empty">Error loading subgraph</div>';
+      }}
+    }}
+    
+    document.getElementById('askBtn').addEventListener('click', askAgent);
+    document.getElementById('queryInput').addEventListener('keypress', (e) => {{
+      if (e.key === 'Enter') askAgent();
+    }});
+  </script>
+</body>
+</html>
+"""
+
+def create_agent_pages():
+    """Create separate HTML pages for each agent"""
+    for agent_id, config in AGENTS.items():
+        html_content = BASE_TEMPLATE.format(
+            agent_id=agent_id,
+            agent_name=config["name"],
+            color=config["color"],
+            bg_color=config["bg_color"],
+            description=config["description"]
+        )
+        
+        filename = f"agent_{agent_id}.html"
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        print(f"Created {filename} for {config['name']}")
+
+if __name__ == "__main__":
+    create_agent_pages()
+    print("\nAll agent pages created!")
+    print("Access them at:")
+    for agent_id in AGENTS.keys():
+        print(f"  - http://127.0.0.1:8000/agent/{agent_id}")
+
